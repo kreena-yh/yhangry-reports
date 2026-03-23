@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>yhangry — DB Health</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-num: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+  --bg: #f5f5f7;
+  --white: #fff;
+  --text: #1d1d1f;
+  --text2: #6e6e73;
+  --text3: #aeaeb2;
+  --border: rgba(0,0,0,0.07);
+  --blue: #0071e3;
+  --green: #34c759;
+  --orange: #ff9500;
+  --red: #ff3b30;
+  --yellow: #ffcc00;
+  --indigo: #5856d6;
+  --teal: #32ade6;
+  --r: 18px;
+  --r-sm: 12px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ── NAV ─────────────────────────────────────── */
+nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(245,245,247,0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+  height: 48px;
+  display: flex; align-items: center;
+  padding: 0 24px;
+  justify-content: space-between;
+}
+.nav-left { display: flex; align-items: center; gap: 8px; }
+.nav-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px rgba(52,199,89,.25); }
+.nav-title { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+.nav-meta { font-size: 12px; color: var(--text3); }
+.nav-btn {
+  font-family: var(--font); font-size: 12px; font-weight: 600;
+  background: var(--blue); color: #fff; border: none;
+  padding: 6px 14px; border-radius: 20px; cursor: pointer;
+  transition: opacity .15s;
+}
+.nav-btn:hover { opacity: .85; }
+
+/* ── PAGE ────────────────────────────────────── */
+.page { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+
+/* ── HERO ────────────────────────────────────── */
+.hero {
+  background: var(--blue);
+  border-radius: var(--r);
+  padding: 40px 36px;
+  margin-bottom: 20px;
+  position: relative; overflow: hidden;
+}
+.hero::after {
+  content: '';
+  position: absolute; top: -60px; right: -60px;
+  width: 260px; height: 260px;
+  background: radial-gradient(circle, rgba(255,255,255,.12) 0%, transparent 65%);
+  pointer-events: none;
+}
+.hero-eyebrow { font-size: 12px; font-weight: 500; color: rgba(255,255,255,.6); letter-spacing: .03em; margin-bottom: 8px; }
+.hero-num {
+  font-family: var(--font-num);
+  font-size: 80px; font-weight: 700; letter-spacing: -0.04em;
+  color: #fff; line-height: 1; margin-bottom: 6px;
+}
+.hero-label { font-size: 17px; font-weight: 400; color: rgba(255,255,255,.8); margin-bottom: 28px; }
+.hero-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.hpill {
+  font-size: 12px; font-weight: 600;
+  background: rgba(255,255,255,.15); color: #fff;
+  padding: 5px 12px; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.hpill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .8; }
+
+/* ── GRID ────────────────────────────────────── */
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
+
+/* ── STAT TILE ───────────────────────────────── */
+.tile {
+  background: var(--white); border-radius: var(--r);
+  padding: 22px 20px; box-shadow: var(--shadow);
+  transition: transform .15s; cursor: default;
+}
+.tile:hover { transform: translateY(-1px); }
+.tile-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 8px; line-height: 1.3; }
+.tile-num {
+  font-family: var(--font-num);
+  font-size: 34px; font-weight: 700; letter-spacing: -0.03em; line-height: 1;
+  margin-bottom: 4px;
+}
+.tile-sub { font-size: 11px; color: var(--text3); }
+.c-blue { color: var(--blue); }
+.c-green { color: var(--green); }
+.c-orange { color: var(--orange); }
+.c-red { color: var(--red); }
+.c-text { color: var(--text); }
+.c-indigo { color: var(--indigo); }
+.c-teal { color: var(--teal); }
+
+/* ── SECTION CARD ────────────────────────────── */
+.card {
+  background: var(--white); border-radius: var(--r);
+  box-shadow: var(--shadow); margin-bottom: 12px;
+  overflow: hidden;
+}
+.card-top {
+  padding: 18px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none;
+}
+.card-top:hover { background: rgba(0,0,0,.01); }
+.card-heading { display: flex; align-items: center; gap: 10px; }
+.section-tag {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  background: #f0f0f5; color: #6e6e73;
+  padding: 3px 8px; border-radius: 6px;
+}
+.card-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.card-right { display: flex; align-items: center; gap: 10px; }
+.card-badge {
+  font-size: 13px; font-weight: 700; letter-spacing: -0.02em;
+}
+.chevron {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #f0f0f5; display: flex; align-items: center; justify-content: center;
+  transition: transform .2s;
+  font-size: 10px; color: var(--text2);
+  flex-shrink: 0;
+}
+.card.open .chevron { transform: rotate(180deg); }
+.card-body {
+  display: none; padding: 0 20px 20px;
+  border-top: 1px solid var(--border);
+}
+.card.open .card-body { display: block; padding-top: 16px; }
+
+/* ── TABLE ───────────────────────────────────── */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th {
+  font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text3); text-align: left; padding: 0 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+.tbl td {
+  padding: 11px 0; border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: rgba(0,0,0,.01); }
+.td-main { font-weight: 600; color: var(--text); font-size: 13px; }
+.td-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.num-cell { font-family: var(--font-num); font-weight: 700; font-size: 15px; letter-spacing: -0.02em; white-space: nowrap; }
+
+/* ── PROGRESS ────────────────────────────────── */
+.bar { height: 4px; background: #f0f0f5; border-radius: 2px; overflow: hidden; margin-top: 5px; width: 80px; }
+.bar-fill { height: 100%; border-radius: 2px; }
+
+/* ── BADGE ───────────────────────────────────── */
+.badge {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 6px; white-space: nowrap;
+}
+.b-green { background: #e8f9ed; color: #1a7a30; }
+.b-blue { background: #e5f2ff; color: #004fa3; }
+.b-orange { background: #fff4e5; color: #b85c00; }
+.b-red { background: #fff0ef; color: #b51900; }
+.b-gray { background: #f0f0f5; color: #6e6e73; }
+.b-indigo { background: #f0f0ff; color: #3c3aaa; }
+
+/* ── INSIGHT ─────────────────────────────────── */
+.insight {
+  background: #f5f9ff;
+  border-radius: var(--r-sm);
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+.insight-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--blue); margin-bottom: 6px; }
+.insight ul { padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
+.insight li { font-size: 13px; color: #3a3a40; line-height: 1.5; }
+.insight li strong { color: var(--text); }
+
+/* ── GATE ROW ────────────────────────────────── */
+.gate-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.gate-row:last-child { border-bottom: none; }
+.gate-circle {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+.gc-pass { background: #e8f9ed; color: #1a7a30; }
+.gc-warn { background: #fff4e5; color: #b85c00; }
+.gc-fail { background: #fff0ef; color: #b51900; }
+.gc-ok { background: #e5f2ff; color: #004fa3; }
+.gate-text { flex: 1; }
+.gate-title { font-size: 13px; font-weight: 600; }
+.gate-desc { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.gate-count { font-family: var(--font-num); font-size: 14px; font-weight: 700; text-align: right; white-space: nowrap; }
+
+/* ── GLOSSARY ────────────────────────────────── */
+.gloss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gloss-item { background: #f5f5f7; border-radius: var(--r-sm); padding: 12px 14px; }
+.gloss-term { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.gloss-def { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+/* ── TERM TOOLTIP ────────────────────────────── */
+.term { border-bottom: 1.5px dashed #b3ccf0; cursor: help; position: relative; display: inline; }
+.term .tt {
+  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: #1d1d1f; color: #fff; font-size: 11px; line-height: 1.4; padding: 8px 12px;
+  border-radius: 8px; width: 220px; z-index: 200;
+  opacity: 0; pointer-events: none; transition: opacity .12s;
+  font-weight: 400;
+}
+.term .tt::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1d1d1f; }
+.term:hover .tt { opacity: 1; }
+
+/* ── ACTION ITEM ─────────────────────────────── */
+.action { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+.action:last-child { border-bottom: none; }
+.action-num { font-family: var(--font-num); font-size: 22px; font-weight: 700; min-width: 64px; line-height: 1.1; flex-shrink: 0; }
+.action-body h4 { font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+.action-body ul { padding-left: 14px; }
+.action-body li { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.action-body li strong { color: var(--text); }
+
+/* ── MODAL ───────────────────────────────────── */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); backdrop-filter: blur(10px); z-index: 100; display: none; align-items: center; justify-content: center; }
+.overlay.show { display: flex; }
+.modal { background: var(--white); border-radius: var(--r); padding: 32px; max-width: 440px; width: 90%; animation: pop .2s cubic-bezier(.34,1.56,.64,1); }
+@keyframes pop { from { opacity:0; transform:scale(.94); } to { opacity:1; transform:scale(1); } }
+.modal h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 10px; }
+.modal p { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 14px; }
+.modal-prompt { background: #f5f5f7; border-radius: var(--r-sm); padding: 12px 14px; font-size: 13px; font-style: italic; color: var(--text); margin-bottom: 18px; line-height: 1.6; }
+.modal-btns { display: flex; gap: 8px; }
+.btn-blue { background: var(--blue); color: #fff; border: none; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font); transition: opacity .15s; }
+.btn-blue:hover { opacity: .85; }
+.btn-gray { background: #f0f0f5; color: var(--text2); border: none; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font); }
+
+/* ── FOOTER ──────────────────────────────────── */
+footer { text-align: center; font-size: 12px; color: var(--text3); padding-top: 20px; }
+footer a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>Refresh live data</h3>
+    <p>This report can't call HubSpot directly from the browser. To update it, copy the message below and send it in this chat.</p>
+    <div class="modal-prompt">"Please re-run the full HubSpot DB health audit and generate an updated report with live data."</div>
+    <div class="modal-btns">
+      <button class="btn-blue" id="copyBtn" onclick="copyPrompt()">Copy message</button>
+      <button class="btn-gray" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<nav>
+  <div class="nav-left">
+    <div class="nav-dot"></div>
+    <span class="nav-title">yhangry · DB Health</span>
+    <span class="nav-meta" style="margin-left:4px">23 Mar 2026</span>
+  </div>
+  <button class="nav-btn" onclick="openModal()">↻ Refresh</button>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">FULLY ENRICHED COMPANIES (T1) — MATCHES OUTBOUND-READY COUNT</div>
+    <div class="hero-num">163</div>
+    <div class="hero-label">have name · domain · unit_count · lead_value · ≥1 contact — out of 24,540 total (0.7%)</div>
+    <div class="hero-pills">
+      <span class="hpill" style="color:rgba(255,255,255,.9)">44 High-value</span>
+      <span class="hpill" style="color:rgba(255,255,255,.9)">38 Mid-value</span>
+      <span class="hpill" style="color:rgba(255,255,255,.9)">81 Low-value</span>
+      <span class="hpill" style="color:rgba(255,200,100,.9)">⚠ 70 scored but missing unit_count</span>
+    </div>
+  </div>
+
+  <!-- TOP STATS -->
+  <div class="grid-4">
+    <div class="tile">
+      <div class="tile-label">Total Companies</div>
+      <div class="tile-num c-blue">24,540</div>
+      <div class="tile-sub">no filter</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Total Contacts</div>
+      <div class="tile-num c-text">40,012</div>
+      <div class="tile-sub">all stages</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Have ≥1 Contact</div>
+      <div class="tile-num c-orange">16,941</div>
+      <div class="tile-sub">7,599 have zero — unreachable</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Fully Enriched (T1)</div>
+      <div class="tile-num c-green">163</div>
+      <div class="tile-sub">name · domain · unit_count · lead_value · contact</div>
+    </div>
+  </div>
+
+  <!-- S1: ENRICHMENT TIERS -->
+  <div class="card open" id="c1">
+    <div class="card-top" onclick="toggle('c1')">
+      <div class="card-heading">
+        <span class="section-tag">S1</span>
+        <span class="card-title">Company Enrichment</span>
+      </div>
+      <div class="card-right">
+        <span class="card-badge c-red">99.3% not enriched</span>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Tier</th>
+            <th>What it means</th>
+            <th>Fields present</th>
+            <th style="text-align:right">Count</th>
+            <th style="text-align:right; width:90px">% of DB</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge b-green">T1 Fully Enriched</span></td>
+            <td>
+              <div class="td-main">We know who they are, how valuable they are, and can contact someone relevant</div>
+              <div class="td-sub">name + domain · unit_count + lead_value · ≥1 contact</div>
+            </td>
+            <td style="font-size:11px;color:var(--text3)">
+              name · domain · <span class="term">unit_count<span class="tt">Total STR properties this company manages. Required to calculate lead_value (High/Mid/Low). Populated by the pyairbnb scraper.</span></span> · <span class="term">lead_value<span class="tt">High = 100+ ICP units · Mid = 30–99 ICP units · Low = under 30. Requires unit_count to be populated first — can't be scored without it.</span></span> · ≥1 contact
+            </td>
+            <td style="text-align:right"><span class="num-cell c-green">163</span></td>
+            <td style="text-align:right">
+              <span style="font-size:12px;font-weight:600">0.7%</span>
+              <div class="bar"><div class="bar-fill" style="width:0.7%;background:var(--green)"></div></div>
+            </td>
+          </tr>
+          <tr style="background:rgba(255,149,0,.04)">
+            <td><span class="badge b-orange">⚠ Scored, no unit_count</span></td>
+            <td>
+              <div class="td-main">Data integrity issue — lead_value was manually set without unit_count</div>
+              <div class="td-sub">lead_value exists but unit_count is blank — the score has no data backing it</div>
+            </td>
+            <td style="font-size:11px;color:var(--text3)">lead_value only · missing unit_count</td>
+            <td style="text-align:right"><span class="num-cell c-orange">70</span></td>
+            <td style="text-align:right">
+              <span style="font-size:12px;font-weight:600">0.3%</span>
+              <div class="bar"><div class="bar-fill" style="width:0.3%;background:var(--orange)"></div></div>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="badge b-indigo">T2 Sized, not scored</span></td>
+            <td>
+              <div class="td-main">We know their portfolio size but haven't scored them yet</div>
+              <div class="td-sub">unit_count is populated — just needs lead_value assigned</div>
+            </td>
+            <td style="font-size:11px;color:var(--text3)">name · domain · unit_count · <em>no lead_value yet</em></td>
+            <td style="text-align:right"><span class="num-cell">2</span></td>
+            <td style="text-align:right">
+              <span style="font-size:12px;font-weight:600">~0%</span>
+              <div class="bar"><div class="bar-fill" style="width:0.1%;background:var(--indigo)"></div></div>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="badge b-orange">T3 Name + Domain</span></td>
+            <td>
+              <div class="td-main">We know who they are — nothing else</div>
+              <div class="td-sub">No unit data, no lead value scored</div>
+            </td>
+            <td style="font-size:11px;color:var(--text3)">name · domain only</td>
+            <td style="text-align:right"><span class="num-cell c-orange">20,147</span></td>
+            <td style="text-align:right">
+              <span style="font-size:12px;font-weight:600;color:var(--orange)">82.1%</span>
+              <div class="bar"><div class="bar-fill" style="width:82%;background:var(--orange)"></div></div>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="badge b-gray">T4 Name Only</span></td>
+            <td>
+              <div class="td-main">Name but no website — hard to enrich</div>
+            </td>
+            <td style="font-size:11px;color:var(--text3)">name only</td>
+            <td style="text-align:right"><span class="num-cell">3,760</span></td>
+            <td style="text-align:right">
+              <span style="font-size:12px;font-weight:600">15.3%</span>
+              <div class="bar"><div class="bar-fill" style="width:15%;background:#aeaeb2"></div></div>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="badge b-gray">T5 Domain Only</span></td>
+            <td><div class="td-main">Website but no name on record</div></td>
+            <td style="font-size:11px;color:var(--text3)">domain only</td>
+            <td style="text-align:right"><span class="num-cell">462</span></td>
+            <td style="text-align:right">
+              <span style="font-size:12px;font-weight:600">1.9%</span>
+              <div class="bar"><div class="bar-fill" style="width:2%;background:#aeaeb2"></div></div>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="badge b-red">T6 Empty</span></td>
+            <td><div class="td-main">No name and no domain</div></td>
+            <td style="font-size:11px;color:var(--text3)">—</td>
+            <td style="text-align:right"><span class="num-cell">0</span></td>
+            <td style="text-align:right"><span style="font-size:12px;font-weight:600">0%</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="insight">
+        <div class="insight-label">Key finding</div>
+        <ul>
+          <li><strong>T1 and the headline number are now the same: 163.</strong> Both require name + domain + unit_count + lead_value + ≥1 contact. No ambiguity.</li>
+          <li><strong>⚠ Data integrity:</strong> 70 companies have lead_value assigned but no unit_count — they were manually scored without backing data. These should be reviewed and either unit_count added or the lead_value cleared.</li>
+          <li>The <span class="term">pyairbnb scraper<span class="tt">A Python tool that queries Airbnb's internal API to pull listing data — total properties per host, guest capacity, quality. Used to populate unit_count. Free, requires Python 3.11 + US VPN.</span></span> is working to move T3 companies to T2 → T1 by populating unit_count.</li>
+          <li>Once unit_count is populated, auto-score lead_value on import — only 2 companies are at T2 (sized but not scored) so the scoring step is nearly instant.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- S2: LEAD VALUE -->
+  <div class="card" id="c2">
+    <div class="card-top" onclick="toggle('c2')">
+      <div class="card-heading">
+        <span class="section-tag">S2</span>
+        <span class="card-title">Lead Value</span>
+      </div>
+      <div class="card-right">
+        <span class="card-badge c-red">99.3% unscored correctly</span>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px">
+        <span class="term">Lead value<span class="tt">Scores a company's commercial potential based on unit_count. High = 100+ ICP units, Mid = 30–99, Low = under 30. Cannot be assigned without unit_count — the two fields must always go together.</span></span> must always be paired with unit_count. <strong>163 companies are correctly scored</strong> (both fields present). <span style="color:var(--orange)">⚠ 70 companies have lead_value set but no unit_count — manually assigned without data. These scores are unreliable.</span>
+      </div>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Tier</th>
+            <th>Definition</th>
+            <th>Correctly scored<br><span style="font-weight:400;text-transform:none;font-size:10px">(has unit_count)</span></th>
+            <th>⚠ Score without data<br><span style="font-weight:400;text-transform:none;font-size:10px">(no unit_count)</span></th>
+            <th style="text-align:right">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge b-green">High-value</span></td>
+            <td style="font-size:12px;color:var(--text2)">100+ <span class="term">ICP units<span class="tt">Properties that qualify as yhangry's ideal — sleeping 8+ guests, Luxe or high-quality tier. A company may have 100 total units but only 40 might be ICP-grade.</span></span> · top priority</td>
+            <td><span class="num-cell c-green">44</span></td>
+            <td><span class="num-cell c-orange">12</span></td>
+            <td style="text-align:right"><span class="num-cell">56</span></td>
+          </tr>
+          <tr>
+            <td><span class="badge b-blue">Mid-value</span></td>
+            <td style="font-size:12px;color:var(--text2)">30–99 ICP units</td>
+            <td><span class="num-cell c-blue">38</span></td>
+            <td><span class="num-cell c-orange">15</span></td>
+            <td style="text-align:right"><span class="num-cell">53</span></td>
+          </tr>
+          <tr>
+            <td><span class="badge b-orange">Low-value</span></td>
+            <td style="font-size:12px;color:var(--text2)">Under 30 ICP units</td>
+            <td><span class="num-cell">81</span></td>
+            <td><span class="num-cell c-orange">43</span></td>
+            <td style="text-align:right"><span class="num-cell">179</span> <span style="font-size:10px;color:var(--text3)">(est.)</span></td>
+          </tr>
+          <tr>
+            <td><span class="badge b-gray">Non-ICP / Not a PM</span></td>
+            <td style="font-size:12px;color:var(--text2)">Confirmed not a fit for yhangry</td>
+            <td><span class="num-cell">102</span></td>
+            <td>—</td>
+            <td style="text-align:right"><span class="num-cell">102</span></td>
+          </tr>
+          <tr style="background:rgba(255,59,48,.03)">
+            <td><span class="badge b-red">Not scored yet</span></td>
+            <td style="font-size:12px;color:var(--text2)">No unit_count → no lead value → no scoring possible</td>
+            <td><span class="num-cell c-red">—</span></td>
+            <td>—</td>
+            <td style="text-align:right"><span class="num-cell c-red">24,147</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="insight">
+        <div class="insight-label">Key finding</div>
+        <ul>
+          <li><strong>Only 82 correctly-scored companies are High or Mid-value</strong> (44 + 38) — these are the reliable priority outbound targets. Add the 12+15=27 manually-scored ones with caution.</li>
+          <li><strong>⚠ Fix needed:</strong> 70 companies have lead_value with no unit_count — someone manually set a tier. These need unit_count added or the lead_value cleared. They should not be trusted for prioritisation.</li>
+          <li>The unscored gap (24,147 companies) closes as the <span class="term">pyairbnb scraper<span class="tt">Python tool querying Airbnb's internal API — pulls total properties per host, guest capacity, listing quality. Populates unit_count. Free, Python 3.11 + US VPN required.</span></span> completes.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- S3: CONTACTABILITY -->
+  <div class="card" id="c3">
+    <div class="card-top" onclick="toggle('c3')">
+      <div class="card-heading">
+        <span class="section-tag">S3</span>
+        <span class="card-title">Contactability</span>
+      </div>
+      <div class="card-right">
+        <span class="card-badge c-red">94.3% never touched</span>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="tile" style="box-shadow:none;background:#f5f5f7">
+          <div class="tile-label">Have email</div>
+          <div class="tile-num c-green">29,251</div>
+          <div class="tile-sub">73.1% of contacts</div>
+        </div>
+        <div class="tile" style="box-shadow:none;background:#f5f5f7">
+          <div class="tile-label">No email</div>
+          <div class="tile-num c-red">10,761</div>
+          <div class="tile-sub">26.9% — can't email them</div>
+        </div>
+        <div class="tile" style="box-shadow:none;background:#fff0ef">
+          <div class="tile-label">Zero engagement ever</div>
+          <div class="tile-num c-red">37,743</div>
+          <div class="tile-sub">94.3% — never called, emailed, or noted</div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Decision-maker (DM) contacts with email — updated definition</div>
+      <div style="background:#f0f9f3;border:1px solid rgba(52,199,89,.2);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:10px;font-size:12px;color:#1a3a20;line-height:1.7">
+        <strong>✅ Include:</strong> CEO · Chief Executive Officer · Director (all) · Owner · Founder · Co-Founder · President · Managing Director · MD · Property Manager · General Manager · CMO · Chief Marketing Officer · Marketing Head · Marketing Manager · Marketing Director · Partnerships Head · Partnerships Manager · Guest Experience Head · Guest Experience Manager<br>
+        <strong>❌ Exclude:</strong> Finance · Accounting · CFO · Bookkeeper · Treasurer · Operations Manager · Operations team · Housekeeping · Cleaning · Maintenance · HR · IT · Admin
+      </div>
+      <table class="tbl" style="margin-bottom:6px">
+        <thead><tr><th>Role group</th><th>Why relevant for yhangry</th><th style="text-align:right">Count</th><th>Data quality</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge b-green">CEO / Owner / Founder / Director / President / MD</span></td>
+            <td style="font-size:12px;color:var(--text2)">Top decision-makers — sign off on vendor partnerships and spend</td>
+            <td style="text-align:right"><span class="num-cell">5,112</span></td>
+            <td style="font-size:11px;color:var(--text3)">Mixed — includes non-STR companies</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-blue">Property Manager / General Manager</span></td>
+            <td style="font-size:12px;color:var(--text2)">Day-to-day operators — often the champion who brings yhangry into their portfolio</td>
+            <td style="text-align:right"><span class="num-cell">~800</span></td>
+            <td style="font-size:11px;color:var(--text3)">Est. subset of director group</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-orange">CMO / Marketing Head / Marketing Manager / Marketing Director</span></td>
+            <td style="font-size:12px;color:var(--text2)">Relevant at larger STR operators for co-marketing and guest acquisition partnerships</td>
+            <td style="text-align:right"><span class="num-cell">1,140</span></td>
+            <td style="font-size:11px;color:var(--red)">⚠️ ~80% from GMAPS dump (non-STR). Must cross-filter against STR companies before any outreach.</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-indigo">Partnerships Head / Partnerships Manager</span></td>
+            <td style="font-size:12px;color:var(--text2)">Direct hook for yhangry's B2B2C pitch — these people own vendor and affiliate relationships</td>
+            <td style="text-align:right"><span class="num-cell">26</span></td>
+            <td style="font-size:11px;color:var(--green)">✅ Small but clean — relevant STR contacts</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-green">Guest Experience Head / Guest Experience Manager</span></td>
+            <td style="font-size:12px;color:var(--text2)">yhangry directly enhances guest experience — these are warm conversations waiting to happen</td>
+            <td style="text-align:right"><span class="num-cell">102</span></td>
+            <td style="font-size:11px;color:var(--green)">✅ Very clean — Wander, EastWest, Cape & Coast, Park City VR, ilovevacations etc.</td>
+          </tr>
+          <tr style="background:rgba(52,199,89,.04)">
+            <td style="font-weight:700">Unique DM contacts with email (est. deduplicated)</td>
+            <td style="font-size:12px;color:var(--text2)">Groups overlap — marketing contacts need STR cross-filter before counting clean</td>
+            <td style="text-align:right"><span class="num-cell c-green" style="font-size:18px">~6,000–7,000</span></td>
+            <td style="font-size:11px;color:var(--text3)">~200–500 marketing contacts likely STR-relevant</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.05em">Companies with a reachable DM (the cross-reference)</div>
+      <table class="tbl" style="margin-bottom:12px">
+        <thead><tr><th>Metric</th><th style="text-align:right">Companies</th><th style="text-align:right">% of 24,540</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Have ≥1 contact (any type)</td>
+            <td style="text-align:right"><span class="num-cell">16,941</span></td>
+            <td style="text-align:right"><span style="font-size:12px;font-weight:600">69%</span></td>
+          </tr>
+          <tr>
+            <td>Have 0 contacts — unreachable by any channel</td>
+            <td style="text-align:right"><span class="num-cell c-red">7,599</span></td>
+            <td style="text-align:right"><span style="font-size:12px;font-weight:600;color:var(--red)">31%</span></td>
+          </tr>
+          <tr>
+            <td>Have email but NO job title (unknown if DM)</td>
+            <td style="text-align:right"><span class="num-cell c-orange">11,705</span></td>
+            <td style="text-align:right"><span style="font-size:12px;font-weight:600">contacts</span></td>
+          </tr>
+          <tr style="background:rgba(52,199,89,.04)">
+            <td style="font-weight:700">Companies with ≥1 DM contact + email</td>
+            <td style="text-align:right"><span class="num-cell c-green" style="font-size:18px">~3,500–4,500</span></td>
+            <td style="text-align:right"><span style="font-size:12px;font-weight:600;color:var(--green)">~14–18%</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="background:#fff0ef;border-radius:var(--r-sm);padding:12px 14px;font-size:13px;color:#8b0000;margin-bottom:14px">
+        ⚠️ <strong>LinkedIn is a blind channel</strong> — <code style="font-size:11px;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:4px">hs_linkedin_profile_url</code> not captured in HubSpot. Unknown how many contacts are reachable via LinkedIn only. Add this field + enrich via Apollo.
+      </div>
+
+      <div class="insight">
+        <div class="insight-label">Key finding</div>
+        <ul>
+          <li><strong>The real outbound pool is ~3,500–4,500 companies</strong> — not 40,012 contacts or 29,251 emails.</li>
+          <li>94.3% of contacts have never been touched — ~27,500 contactable people with zero outreach ever.</li>
+          <li>⚠️ <strong>Marketing contacts (1,140) must be cross-filtered against STR companies before any outreach</strong> — ~80% are from the GMAPS dump (agencies, universities, consumer brands) and are not relevant to yhangry.</li>
+          <li><strong>Guest Experience contacts (102) are the highest-quality new DM group</strong> — almost entirely at STR companies. Start here.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- S4: LEAD SOURCE -->
+  <div class="card" id="c4">
+    <div class="card-top" onclick="toggle('c4')">
+      <div class="card-heading">
+        <span class="section-tag">S4</span>
+        <span class="card-title">Lead Source</span>
+      </div>
+      <div class="card-right">
+        <span class="card-badge c-orange">82.5% untagged</span>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Companies</th>
+            <th>With contact</th>
+            <th>ICP signal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="td-main"><span class="term">PMS integrations<span class="tt">Property Management System — software like Hostaway, Guesty, Streamline, Hospitable, Hostfully, SuiteOp, EnsoConnect, ConduitAI, Happy Guest. A company using a PMS is confirmed to be an active STR operator — the strongest ICP signal we have.</span></span></div>
+              <div class="td-sub">Track, Streamline, Hostaway, Guesty, Hospitable, Hostfully, HostbuddyAI, EnsoConnect, SuiteOp, ConduitAI, Happy Guest</div>
+            </td>
+            <td><span class="num-cell c-blue">4,167</span></td>
+            <td><span class="num-cell">2,638</span></td>
+            <td><span class="badge b-green">🟢 Highest — verified STR operator</span></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="td-main">LinkedIn (manual)</div>
+              <div class="td-sub">Em's, Siddhi's, Rosie's, LinkedIn Search, Jobs Scraper</div>
+            </td>
+            <td><span class="num-cell">21</span></td>
+            <td><span class="num-cell">~21</span></td>
+            <td><span class="badge b-green">🟢 Highest — manually qualified</span></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="td-main">Conferences + curated lists</div>
+              <div class="td-sub">DARM, VRMA, Comparent 100, Jodie's Summit</div>
+            </td>
+            <td><span class="num-cell">~60</span></td>
+            <td>—</td>
+            <td><span class="badge b-indigo">🟡 High — industry verified</span></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="td-main">Outbound + inbound</div>
+              <div class="td-sub">Outbound Campaign, Affiliate Form, Warm Intro, EWH, Airbnb/VRBO Automation, Instagram, Facebook</div>
+            </td>
+            <td><span class="num-cell">~35</span></td>
+            <td>—</td>
+            <td><span class="badge b-orange">🟡 Medium</span></td>
+          </tr>
+          <tr style="background:rgba(255,59,48,.03)">
+            <td>
+              <div class="td-main" style="color:var(--text2)">No lead source recorded</div>
+              <div class="td-sub">Dec '15 directory scrape + Jan '30 <span class="term">GMAPS dump<span class="tt">Google Maps export uploaded Jan 30 2026. Brought in ~6,634 records but ~92% were irrelevant — banks, universities, law firms, etc. No lead_source tag was applied at import.</span></span> — untagged at import</div>
+            </td>
+            <td><span class="num-cell c-red">20,257</span></td>
+            <td>—</td>
+            <td><span class="badge b-red">🔴 Unknown</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="insight">
+        <div class="insight-label">PMS leads shortcut</div>
+        <ul>
+          <li><strong>2,638 PMS companies already have contacts</strong> — and the PMS source IS the ICP signal. No scraper needed for these.</li>
+          <li>Filter PMS companies for DM + email → enrol in Smartlead → this is the fastest route to a large qualified outbound batch.</li>
+          <li>Apply retroactive lead_source tags: Dec '15 batch = "Airbnb Directory", Jan '30 batch = "GMAPS Export".</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- S5: STR CLASSIFICATION -->
+  <div class="card" id="c5">
+    <div class="card-top" onclick="toggle('c5')">
+      <div class="card-heading">
+        <span class="section-tag">S5</span>
+        <span class="card-title">STR Classification</span>
+      </div>
+      <div class="card-right">
+        <span class="card-badge c-red">~63% non-STR noise</span>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Estimated from a sample of 1,681 companies (6.9% sample rate). Directional, not exact.</div>
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="tile" style="box-shadow:none;background:#e8f9ed;border:1px solid rgba(52,199,89,.2)">
+          <div class="tile-label" style="color:#1a7a30">A — Genuine ICP</div>
+          <div class="tile-num" style="color:#1a7a30">~4,900</div>
+          <div class="tile-sub" style="color:#2a8a40">~20% of DB · multi-unit <span class="term">STR<span class="tt">Short-Term Rental — properties rented on Airbnb, VRBO etc. yhangry's target partners manage multiple STR properties (property managers), not individual hosts with 1–3 personal listings.</span></span> property managers</div>
+        </div>
+        <div class="tile" style="box-shadow:none;background:#fff8e5;border:1px solid rgba(255,149,0,.2)">
+          <div class="tile-label" style="color:#b85c00">B — Individual Host</div>
+          <div class="tile-num" style="color:#b85c00">~4,170</div>
+          <div class="tile-sub" style="color:#b85c00">~17% · 1–3 personal properties, not a PM</div>
+        </div>
+        <div class="tile" style="box-shadow:none;background:#fff0ef;border:1px solid rgba(255,59,48,.2)">
+          <div class="tile-label" style="color:#b51900">C — Non-STR</div>
+          <div class="tile-num" style="color:#b51900">~15,470</div>
+          <div class="tile-sub" style="color:#b51900">~63% · banks, universities, agencies — suppress from all sequences</div>
+        </div>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>Cohort</th><th>Total</th><th>Sampled</th><th>Bucket A %</th><th>Bucket C %</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:600">Dec 2025</td>
+            <td><span class="num-cell">17,825</span></td>
+            <td><span style="font-size:11px;color:var(--text2)">1,000 (5.6%)</span></td>
+            <td><span class="num-cell c-green">~28%</span></td>
+            <td><span class="num-cell">~47%</span></td>
+            <td style="font-size:11px;color:var(--text3)">Airbnb/VRBO directory scrape — mix of PMs, solo hosts, some tech tools</td>
+          </tr>
+          <tr>
+            <td style="font-weight:600">Jan 2026</td>
+            <td><span class="num-cell">6,634</span></td>
+            <td><span style="font-size:11px;color:var(--text2)">600 (9.0%)</span></td>
+            <td><span class="num-cell c-green">~6%</span></td>
+            <td><span class="num-cell c-red">~92%</span></td>
+            <td style="font-size:11px;color:var(--text3)">Jan '30 GMAPS dump — banks, universities, law firms</td>
+          </tr>
+          <tr>
+            <td style="font-weight:600">Feb 2026</td>
+            <td><span class="num-cell">28</span></td>
+            <td><span style="font-size:11px;color:var(--text2)">28 (100%)</span></td>
+            <td><span class="num-cell c-green">~21%</span></td>
+            <td><span class="num-cell">~64%</span></td>
+            <td style="font-size:11px;color:var(--text3)">Small cohort — affiliate + Happy Guest leads</td>
+          </tr>
+          <tr>
+            <td style="font-weight:600">Mar 2026</td>
+            <td><span class="num-cell">53</span></td>
+            <td><span style="font-size:11px;color:var(--text2)">53 (100%)</span></td>
+            <td><span class="num-cell c-green">~42%</span></td>
+            <td><span class="num-cell">~37%</span></td>
+            <td style="font-size:11px;color:var(--text3)">Recent scraper + affiliate outputs — better quality</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="insight">
+        <div class="insight-label">Key finding</div>
+        <ul>
+          <li><strong>Suppress all Jan '26 records without a lead_source</strong> — ~6,100 records, 92% non-STR. Protects deliverability immediately.</li>
+          <li>True ICP pool is ~4,900. Of those, only <strong>163 are fully enriched (T1) today</strong> — a gap of ~4,737 companies that are ICP but not yet sized, scored, or contactable.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- S6: OUTBOUND GATES -->
+  <div class="card" id="c6">
+    <div class="card-top" onclick="toggle('c6')">
+      <div class="card-heading">
+        <span class="section-tag">S6</span>
+        <span class="card-title">Outbound Gates</span>
+      </div>
+      <div class="card-right">
+        <span class="card-badge c-green">163 clear all 5</span>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px">All 5 gates must be cleared before a company is fully enriched and outbound-ready. This is where the pipeline is blocked.</div>
+      <div class="gate-row">
+        <div class="gate-circle gc-warn">1</div>
+        <div class="gate-text">
+          <div class="gate-title">Company identified — name and website present?</div>
+          <div class="gate-desc">name + domain required — without both we can't look them up or research them</div>
+        </div>
+        <div class="gate-count c-green">20,609 (84%)</div>
+      </div>
+      <div class="gate-row">
+        <div class="gate-circle gc-fail">2</div>
+        <div class="gate-text">
+          <div class="gate-title">Portfolio sized — do we know how many properties they manage?</div>
+          <div class="gate-desc"><span class="term">unit_count<span class="tt">Total STR properties this company manages. The pyairbnb scraper pulls this from Airbnb. Without it, we can't score the lead. Biggest current bottleneck.</span></span> must be populated · <strong>biggest bottleneck — only 193 companies pass (0.8%)</strong></div>
+        </div>
+        <div class="gate-count c-red">193 (0.8%)</div>
+      </div>
+      <div class="gate-row">
+        <div class="gate-circle gc-fail">3</div>
+        <div class="gate-text">
+          <div class="gate-title">Lead scored — is lead_value assigned based on unit_count?</div>
+          <div class="gate-desc"><span class="term">lead_value<span class="tt">High = 100+ ICP units · Mid = 30–99 · Low = under 30. Must be derived from unit_count — not manually set without data.</span></span> = High / Mid / Low · must always be paired with unit_count · 70 manually-scored records without unit_count don't count</div>
+        </div>
+        <div class="gate-count c-red">163 (0.7%)</div>
+      </div>
+      <div class="gate-row">
+        <div class="gate-circle gc-warn">4</div>
+        <div class="gate-text">
+          <div class="gate-title">Right person found — is there a DM contact?</div>
+          <div class="gate-desc">≥1 contact with a relevant title: <span class="term">CEO · Director · Owner · Founder · CMO · Marketing Head/Manager · Partnerships Head/Manager · Guest Experience Head/Manager · GM · Property Manager<span class="tt">❌ Exclude: Finance, CFO, Accounting, Ops team, Housekeeping, Cleaning, Maintenance, HR, IT, Admin</span></span></div>
+        </div>
+        <div class="gate-count c-orange">~6,000–7,000 contacts</div>
+      </div>
+      <div class="gate-row">
+        <div class="gate-circle gc-warn">5</div>
+        <div class="gate-text">
+          <div class="gate-title">Reachable — does that DM have a verified email or LinkedIn?</div>
+          <div class="gate-desc">Email = confirmed channel · LinkedIn = secondary channel (not yet captured in HubSpot — see S3)</div>
+        </div>
+        <div class="gate-count c-green">29,251 with email</div>
+      </div>
+      <div class="gate-row" style="background:rgba(52,199,89,.06);border-radius:var(--r-sm);padding:12px 14px;border:1.5px solid rgba(52,199,89,.25);margin-top:8px">
+        <div class="gate-circle gc-ok" style="background:var(--green);color:#fff;font-size:14px">✓</div>
+        <div class="gate-text">
+          <div class="gate-title" style="color:var(--green)">All 5 gates cleared = Fully Enriched (T1) = Outbound Ready</div>
+          <div class="gate-desc">name + domain + unit_count + lead_value (from unit_count) + ≥1 contact — T1 and this number are the same: <strong>163</strong></div>
+        </div>
+        <div class="gate-count c-green" style="font-size:22px">163</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S7: PRIORITY ACTIONS -->
+  <div class="card open" id="c7">
+    <div class="card-top" onclick="toggle('c7')">
+      <div class="card-heading">
+        <span class="section-tag">S7</span>
+        <span class="card-title">Priority Actions</span>
+      </div>
+      <div class="card-right">
+        <span class="card-badge c-blue">5 actions</span>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="action">
+        <div class="action-num c-red">15,470</div>
+        <div class="action-body">
+          <h4>Suppress non-STR companies from all sequences immediately</h4>
+          <ul>
+            <li>Build a HubSpot list: all Jan '26 records with no lead_source → exclude from every sequence</li>
+            <li>Protects deliverability and prevents irrelevant outreach to banks, universities, agencies</li>
+          </ul>
+        </div>
+      </div>
+      <div class="action">
+        <div class="action-num c-orange">2,638</div>
+        <div class="action-body">
+          <h4>Fast-track PMS leads — no scraper needed</h4>
+          <ul>
+            <li><strong>PMS membership = confirmed STR operator.</strong> No unit_count required for this cohort.</li>
+            <li>Filter: PMS source + DM job title (CEO/Owner/Director/GM/Marketing/Partnerships/GX) + email → enrol in Smartlead now</li>
+          </ul>
+        </div>
+      </div>
+      <div class="action">
+        <div class="action-num c-orange">70</div>
+        <div class="action-body">
+          <h4>Fix data integrity bug — 70 companies have lead_value but no unit_count</h4>
+          <ul>
+            <li>These were manually scored without portfolio size data — the tier cannot be trusted</li>
+            <li><strong>Option A:</strong> Research and populate unit_count for these 70 companies, then confirm or correct the lead_value</li>
+            <li><strong>Option B:</strong> Clear lead_value on all 70 until unit_count is added by the scraper</li>
+          </ul>
+        </div>
+      </div>
+      <div class="action">
+        <div class="action-num c-orange">4,737</div>
+        <div class="action-body">
+          <h4>Complete <span class="term">pyairbnb<span class="tt">Python tool using the open-source pyairbnb library. Queries Airbnb's internal API to pull host data — total properties, guest capacity, listing quality. Populates unit_count. Free, requires Python 3.11 + US VPN.</span></span> → populate unit_count → auto-score lead_value on import</h4>
+          <ul>
+            <li>~4,737 estimated ICP companies have no unit_count — Gate 2 bottleneck</li>
+            <li>Once unit_count is set, auto-assign lead_value immediately — never set lead_value manually without unit_count</li>
+          </ul>
+        </div>
+      </div>
+      <div class="action">
+        <div class="action-num c-orange">7,599</div>
+        <div class="action-body">
+          <h4>Run Dom's enrichment on ICP companies with no contacts</h4>
+          <ul>
+            <li>7,599 companies have zero contacts — start with the ~4,900 estimated ICP companies</li>
+            <li>20% hit rate = ~980 newly contactable companies added to the enriched pool</li>
+          </ul>
+        </div>
+      </div>
+      <div class="action">
+        <div class="action-num" style="color:var(--text3)">11,705</div>
+        <div class="action-body">
+          <h4>Enrich job titles for contacts with email but no title</h4>
+          <ul>
+            <li>11,705 contacts have email but no job title — role unknown, can't confirm if DM or not</li>
+            <li>Run Apollo/LinkedIn enrichment — 30% DM hit rate = ~3,500 additional DM contacts unlocked</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GLOSSARY -->
+  <div class="card" id="cg">
+    <div class="card-top" onclick="toggle('cg')">
+      <div class="card-heading">
+        <span class="section-tag">GLOSS</span>
+        <span class="card-title">Terms Defined</span>
+      </div>
+      <div class="card-right">
+        <span class="card-badge" style="color:var(--text3)">12 terms</span>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="gloss-grid">
+        <div class="gloss-item"><div class="gloss-term">unit_count</div><div class="gloss-def">Total STR properties a company manages. Primary input for lead value scoring. Populated by the pyairbnb scraper.</div></div>
+        <div class="gloss-item"><div class="gloss-term">icp_unit_count</div><div class="gloss-def">Subset of units that qualify as ICP — properties sleeping 8+ guests. A company might have 100 units but only 40 are ICP-grade.</div></div>
+        <div class="gloss-item"><div class="gloss-term">lead_value</div><div class="gloss-def">Commercial tier: High = 100+ ICP units, Mid = 30–99, Low = under 30. Primary outbound prioritisation field.</div></div>
+        <div class="gloss-item"><div class="gloss-term">portfolio_type</div><div class="gloss-def">Property quality tier: Luxe, Mid-Market, Budget, or Mixed. Affects which chef tier yhangry offers and how to pitch.</div></div>
+        <div class="gloss-item"><div class="gloss-term">lead_source</div><div class="gloss-def">Where a lead came from — e.g. "PMS - Hostaway US", "Conference: VRMA", "Em's LinkedIn". Determines messaging context.</div></div>
+        <div class="gloss-item"><div class="gloss-term">Decision-Maker (DM)</div><div class="gloss-def"><strong>✅ Include:</strong> CEO, Chief Executive Officer, Director (any), Owner, Founder, Co-Founder, President, Managing Director, MD, Property Manager, General Manager, CMO, Marketing Head/Manager/Director, Partnerships Head/Manager, Guest Experience Head/Manager.<br><strong>❌ Exclude:</strong> Finance, CFO, Accounting, Bookkeeper, Operations Manager, Ops team, Housekeeping, Cleaning, Maintenance, HR, IT, Admin.</div></div>
+        <div class="gloss-item"><div class="gloss-term">pyairbnb</div><div class="gloss-def">Open-source Python library querying Airbnb's internal API. Pulls host data — property count, guest capacity, listing quality. Free, requires Python 3.11 + US VPN.</div></div>
+        <div class="gloss-item"><div class="gloss-term">PMS</div><div class="gloss-def">Property Management System — software (Hostaway, Guesty, Streamline etc.) used by STR operators. A company using a PMS is a confirmed STR operator — strongest ICP signal.</div></div>
+        <div class="gloss-item"><div class="gloss-term">STR</div><div class="gloss-def">Short-Term Rental — properties on Airbnb, VRBO etc. yhangry's partners manage multiple STRs (property managers), not solo hosts with 1–3 personal listings.</div></div>
+        <div class="gloss-item"><div class="gloss-term">ICP</div><div class="gloss-def">Ideal Customer Profile — a company managing 30+ STR properties in the US, including Luxe or Mixed-quality units sleeping 8+ guests.</div></div>
+        <div class="gloss-item"><div class="gloss-term">GMAPS dump</div><div class="gloss-def">Google Maps export uploaded Jan 30 2026. Brought in ~6,634 records, ~92% irrelevant (banks, universities, law firms). No lead_source applied at import.</div></div>
+        <div class="gloss-item"><div class="gloss-term">Zero engagement</div><div class="gloss-def">Contact where both hs_last_sales_activity_timestamp AND notes_last_contacted are blank — never emailed, called, or noted. 94.3% of contacts in the DB.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    yhangry · HubSpot DB Health v5 · 23 Mar 2026 · T1 (Fully Enriched) = Outbound Ready = <strong style="color:var(--text2)">163</strong> · <a href="#" onclick="openModal();return false;">↻ Refresh data</a>
+  </footer>
+
+</div>
+
+<script>
+function toggle(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+function openModal() { document.getElementById('overlay').classList.add('show'); }
+function closeModal() { document.getElementById('overlay').classList.remove('show'); }
+function copyPrompt() {
+  navigator.clipboard.writeText('Please re-run the full HubSpot DB health audit and generate an updated report with live data.');
+  const b = document.getElementById('copyBtn');
+  b.textContent = '✓ Copied'; b.style.background = '#34c759';
+  setTimeout(() => { b.textContent = 'Copy message'; b.style.background = ''; }, 2000);
+}
+</script>
+</body>
+</html>
